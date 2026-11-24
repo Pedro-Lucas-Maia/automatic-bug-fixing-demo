@@ -16,11 +16,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ScopedCodeBaseTools {
     private static final int MAX_CALLS = 10;
-    private static final String TEST_DIR_PREFIX = "src/test/java/br/demo/matricula";
+    private static final String TEST_DIR_PREFIX = "src/test/java/br/demo/matricula/";
 
     private final Path targetAppRoot;
     private final Set<String> allowlist;
     private final AtomicInteger callCount = new AtomicInteger(0);
+    private Path ultimoTesteCriado;
 
     public ScopedCodeBaseTools(Path targetAppRoot, List<String> allowlist) {
         this.targetAppRoot = targetAppRoot.toAbsolutePath().normalize();
@@ -45,7 +46,7 @@ public class ScopedCodeBaseTools {
             return "Erro: Acesso negado. Arquivo fora do escopo permitido";
         }
         Path arquivo = resolverSeguro(normalizado);
-        if (arquivo == null ||Files.exists(arquivo)) {
+        if (arquivo == null ||!Files.exists(arquivo)) {
             return "ERRO: Arquivo não encontrado: " + normalizado;
         }
         try {
@@ -79,6 +80,9 @@ public class ScopedCodeBaseTools {
         try {
             Files.createDirectories(arquivo.getParent());
             Files.writeString(arquivo, conteudo);
+            if (normalizado.startsWith(TEST_DIR_PREFIX)) {
+                this.ultimoTesteCriado = arquivo;
+            }
             return "SUCESSO: Arquivo gravado em " + normalizado;
         } catch (IOException e) {
             return "ERRO ao gravar arquivo: " + e.getMessage();
@@ -123,8 +127,12 @@ public class ScopedCodeBaseTools {
         }
     }
 
-    private int getTotalChamadas() {
+    public int getTotalChamadas() {
         return callCount.get();
+    }
+
+    public Path getUltimoTesteCriado() {
+        return ultimoTesteCriado;
     }
 
     private boolean excedeuLimite() {
