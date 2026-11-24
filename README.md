@@ -63,18 +63,27 @@ demo-agente-bugs/
 ### 1. Classificação Estruturada (`POST /api/classify-bug`)
 Recebe a URI e o *stack trace*, aplica um *System Prompt* com **listas fechadas** de valores válidos e `temperature=0.0`, e devolve um `BugClassification` já tipado (`modulo`, `camada`, `tipoExcecao`, `categoriaCausa`, `resumo`), registrando o consumo de tokens.
 
-### 2. Loop do Agente de Correção (`POST /api/analyze-bug` e `POST /api/analyze-bug-mcp`)
+### 2. Loop do Agente de Correção e Fluxo de Decisão (`POST /api/analyze-bug` e `POST /api/analyze-bug-mcp`)
+
+Um princípio central desta demo é que o agente **nunca "chuta" uma correção sem validação** e **nunca deixa o desenvolvedor de mãos vazias**:
+- **Caminho feliz (bug reproduzido e corrigido):** o agente entrega o teste JUnit passando, o `git diff` mínimo e o resumo para revisão humana.
+- **Caminho de fallback (não conseguiu reproduzir, o teste não passou ou estourou o limite de 10 chamadas):** em vez de insistir em loop infinito ou inventar código, o agente **mastiga tudo o que aprendeu** — arquivos inspecionados, causa provável, o que tentou testar, qual erro ocorreu na execução e a sugestão de correção para o desenvolvedor finalizar rapidamente.
 
 ```mermaid
 flowchart TD
-    A["POST /api/analyze-bug ou /api/analyze-bug-mcp"] --> B["BugFixAgentService envia stack trace + protocolo à LLM"]
-    B --> C["1. lerArquivo (somente arquivos da allowlist)"]
-    C --> D["2. escreverArquivo (cria teste JUnit 5 + Mockito em src/test/.../matricula/)"]
-    D --> E["3. rodarTeste (executa Maven e confirma falha reproduzindo o bug)"]
-    E --> F["4. escreverArquivo (aplica correção mínima no arquivo da allowlist)"]
-    F --> G["5. rodarTeste (valida que o teste passou: EXIT_CODE=0)"]
-    G --> H["Fora da IA: captura git diff + código do teste + contagem de chamadas e tokens"]
-    H --> I["Retorna AgentResult (JSON) pronto para revisão humana"]
+    A["POST /api/analyze-bug ou /api/analyze-bug-mcp"] --> B["1. Lê arquivos permitidos na allowlist (lerArquivo)"]
+    B --> C["2. Cria teste JUnit 5 + Mockito (escreverArquivo)"]
+    C --> D["3. Executa teste (rodarTeste)"]
+    D --> E{"Reproduziu o bug\ne dentro do limite (10)? "}
+
+    E -- "Não" --> FALLBACK["Diagnóstico mastigado para o dev:\n• O que analisou na allowlist\n• O que tentou testar e por que falhou\n• Hipótese de causa raiz e próximos passos"]
+
+    E -- "Sim (teste falhou com o bug)" --> F["4. Aplica correção mínima na allowlist (escreverArquivo)"]
+    F --> G["5. Roda o teste novamente (rodarTeste)"]
+    G --> H{"Teste passou (EXIT_CODE=0)\ndentro do limite (10)?"}
+
+    H -- "Sim" --> OK["Retorna AgentResult pronto para revisão humana:\n• git diff exato (capturado fora da IA)\n• Código do teste gerado\n• Resumo + chamadas + tokens\n(sem commit automático)"]
+    H -- "Não" --> FALLBACK
 ```
 
 - **`POST /api/analyze-bug` (Tools locais):** instancia `ScopedCodeBaseTools` por requisição dentro do próprio `bug-agent-server`.
