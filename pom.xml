@@ -13,6 +13,7 @@
 
     <modules>
         <module>target-app</module>
+        <module>codebase-mcp-server</module>
         <module>bug-agent-server</module>
     </modules>
 </project>
