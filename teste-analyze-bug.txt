@@ -1,0 +1,33 @@
+# Requisição de teste — POST /api/analyze-bug (Marco 4 — Tools locais)
+
+curl -X POST http://localhost:8080/api/analyze-bug \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uri": "/sistema/graduacao/matricula/confirmar",
+    "stackTrace": "java.lang.NullPointerException: Cannot invoke \"br.demo.matricula.Turma.getCodigo()\" because the return value of \"br.demo.matricula.Aluno.getTurma()\" is null\n\tat br.demo.matricula.MatriculaService.confirmarMatricula(MatriculaService.java:18)",
+    "allowlist": [
+      "src/main/java/br/demo/matricula/MatriculaService.java",
+      "src/main/java/br/demo/matricula/Aluno.java",
+      "src/main/java/br/demo/matricula/Turma.java",
+      "src/main/java/br/demo/matricula/AlunoRepository.java"
+    ]
+  }'
+
+# Requisição de teste — POST /api/analyze-bug-mcp (Marco 5 — MCP Server na porta 8081)
+# Suba primeiro o codebase-mcp-server (porta 8081) e depois o bug-agent-server (porta 8080)
+
+curl -X POST http://localhost:8080/api/analyze-bug-mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uri": "/sistema/graduacao/matricula/confirmar",
+    "stackTrace": "java.lang.NullPointerException: Cannot invoke \"br.demo.matricula.Turma.getCodigo()\" because the return value of \"br.demo.matricula.Aluno.getTurma()\" is null\n\tat br.demo.matricula.MatriculaService.confirmarMatricula(MatriculaService.java:18)",
+    "allowlist": [
+      "src/main/java/br/demo/matricula/MatriculaService.java",
+      "src/main/java/br/demo/matricula/Aluno.java",
+      "src/main/java/br/demo/matricula/Turma.java",
+      "src/main/java/br/demo/matricula/AlunoRepository.java"
+    ]
+  }'
+
+# Resetar o target-app após o teste (voltar o bug original e remover o teste gerado):
+# git checkout -- target-app/ && git clean -fd target-app/
