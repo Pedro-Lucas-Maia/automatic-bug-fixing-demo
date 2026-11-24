@@ -33,4 +33,9 @@ public class BugAgentController {
     public AgentResult analyzeBug(@RequestBody BugReportRequest request) {
         return bugFixAgentService.analyzeAndFix(request);
     }
+
+    @PostMapping("/analyze-bug-mcp")
+    public AgentResult analyzeBugMcp(@RequestBody BugReportRequest request) {
+        return bugFixAgentService.analyzeAndFixWithMcp(request);
+    }
 }
